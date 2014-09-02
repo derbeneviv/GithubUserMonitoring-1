@@ -1,12 +1,40 @@
 #! /usr/bin/python
+#api
 import json
 import urllib2
+#sqlite
 import sqlite3
+#options
 import sys,getopt
+#mail
+import smtplib
+from email.mime.text import MIMEText
+
+def mail(message,recipient,subject,smtp_host,sender='repository_bot@tech-corps.com'):
+	msg = MIMEText(message)
+	msg['Subject'] = subject
+	msg['From'] =sender
+	msg['To'] = recipient
+	try:
+		s = smtplib.SMTP(smtp_host)
+		s.sendmail(sender,recipient,msg.as_string())
+		s.quit()
+		log('e-mail notification sent to '+recipient)
+	except smtplib.socket.error:
+		print 'No connection to SMTP server'
+		sys.exit(2)
+
+def mailall(message,recipients,subject,smtp_host,sender='repository_bot@tech-corps.com'):
+	for rec in recipients:
+		mail(message,rec,subject,smtp_host,sender='repository_bot@tech-corps.com')
 
 def log(log_string):
 	print log_string
 
+def log_and_send(logstring,msg):
+	log(msg)
+	logstring=logstring+'\n'+msg
+	mailall(msg,recipients,subject,smtp_host,sender='repository_bot@tech-corps.com')
 def init_db(host,user,password,db):
 	
 	try:
@@ -23,8 +51,6 @@ def init_db(host,user,password,db):
 		log ('table \'members\' created')
 	except sqlite3.Error, e:
 		log("%s:" % e.args[0])
-	#except MySQLdb.OperationalError:
-	#	print 'table \'members\' already created'
 
 	try:
 		sql = '''CREATE TABLE repos(
@@ -36,8 +62,6 @@ def init_db(host,user,password,db):
 		log('table \'repos\' created')
 	except sqlite3.Error, e:
 		log("%s:" % e.args[0])
-	#except MySQLdb.OperationalError:
-	#	print 'table \'repos\' already created'
 	return con
 
 
@@ -45,8 +69,12 @@ def api_request(req_url, token, api_url='https://api.github.com'):
 	url = api_url+req_url
 	headers = {'Authorization':'token '+ token}
 	req = urllib2.Request(url=url, headers=headers)
-	response = urllib2.urlopen(req)
-	return json.load(response)
+	try:
+		response = urllib2.urlopen(req)
+		return json.load(response)
+	except urllib2.HTTPError as e:
+		print e
+		sys.exit(2)
 	
 def get_user_repos(username, token):
 	full_res=api_request('/users/'+username+'/repos',token=token)
@@ -112,10 +140,14 @@ def main():
 	password = 'password'
 	db = 'public_repos.db'
 	org = 'Tech-Corps'
+	emails = []
+	logstring = ''
 	token = None
-	print sys.argv
+	m_flag = False
+	f_flag = False
+#	print sys.argv
 	try: 
-		opts, args = getopt.getopt(sys.argv[1:],"ht:d:u:p:H:o:",["help","token","database","user", "password","host","org"])
+		opts, args = getopt.getopt(sys.argv[1:],"ht:d:u:p:H:o:m:f:",["help","token","database","user", "password","host","org","mail","file"])
 	except getopt.GetoptError:
 		print 'wrong options. Try -h for the whole list'
 		sys.exit(2)
@@ -127,7 +159,9 @@ def main():
 			-u <username>, --user <username>: specify db user
 			-p <password>, --password <password>: specify db pass
 			-H <hostname>, --hostname <hostname>: specify db host
-			-o <org_name>, --org: organization name"""
+			-o <org_name>, --org: organization name
+			-m <email1,email2,...>, --mail <email1,email2,...>: specify emails to send notifications. Conflicts with -f
+			-f <file>, --file <file>: specify file with emails. 1 address per line. Conflicts with -m"""
 			sys.exit()
 		elif opt in ("-t", "--token"):
 			token = arg
@@ -141,8 +175,25 @@ def main():
 			host = arg
 		elif opt in ("-o", "--org"):
 			org = arg
+		elif opt in ("-m","--mail"):
+			m_flag = True
+			email_sting = arg
+			emails = arg.split(",")
+			for email in emails:
+				email = email.strip()
+		elif opt in ("-f","--file"):
+			f_flag = True
+			with open(arg,'r') as f:
+				for line in f:
+					emails.append(line)
 	if not token:
 		print "token required! pass it with -t option"
+		sys.exit(2)
+	if f_flag and m_flag:
+		print "-f and -m arguments found! please use only one of them"
+		sys.exit(2)
+	if not emails:
+		print "emails required! pass it with -m or -f option!"
 		sys.exit(2)
 	connect=init_db(host, user, password,db)
 	members = get_org_users(org,token)
@@ -155,19 +206,21 @@ def main():
 		for reponame, repo_current_date in repos.iteritems():
 			repo_db_date = is_repo_in_db(userid,reponame,connect)
 			if not repo_db_date:
-				log('['+repo_current_date+'] NEW REPOSITOIRY')
-				log ('owner:' +  user)
-				log ('repo name:'+ reponame)
+				sending_msg = '['+repo_current_date+'] NEW REPOSITOIRY'+'\nowner: '+user+'\nrepo name:'+ reponame
+				log(sending_msg)
+				logstring = logstring + '\n'+ sending_msg
 				add_repo_to_db(userid, reponame, repo_current_date, connect)
-			elif repo_db_date != repo_current_date:
-				log ('['+repo_current_date+']'+' REPOSITORY UPDATED:')
-				log ('owner:'+ user)
-				log ('repo name:'+ reponame)
 
+			elif repo_db_date != repo_current_date:
+				sending_msg = '['+repo_current_date+']'+' REPOSITORY UPDATED:'+'\n'+'owner:'+ user+'\n'+'repo name:'+ reponame
+				log(sending_msg)
+				logstring = logstring + '\n'+ sending_msg
 				update_date(userid,reponame,repo_current_date,connect)
-					
+	if logstring:
+		mailall(logstring,emails,'repositories updated','localhost')
 	connect.close()
 
 
 if __name__ == '__main__':
-	  main()
+#	mail('test msg','ivan.derbenev@tech-corps.com','test@test.te','subj','localhost')
+	main()
