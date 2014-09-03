@@ -205,9 +205,6 @@ def main():
 			for email in emails:
 				email = email.strip()
 
-	print emails
-	print orgs
-
 	if not token:
 		print "token required! pass it with -t option"
 		sys.exit(2)
@@ -239,8 +236,8 @@ def main():
 					log(sending_msg)
 					logstring = logstring + '\n'+ sending_msg
 					update_date(userid,reponame,repo_current_date,connect)
-#		if logstring:
-#		mailall(logstring,emails,'repositories updated','localhost')
+	if logstring:
+		mailall(logstring,emails,'repositories updated','localhost')
 	connect.close()
 
 
