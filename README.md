@@ -3,7 +3,7 @@ GithubUserMonitoring
 
 This SW is to monitor public repos of your organization members for newly create or modified so that you can check those repos for company sensitive data.
 
-Needed python 2.7
+Needed python 2.7, PyYAML lib (installed via pip), any SMTP server
 
 usage:
 
@@ -24,7 +24,21 @@ keys:
     -u <username>, --user <username>: specify db user  
     -p <password>, --password <password>: specify db pass  
     -H <hostname>, --hostname <hostname>: specify db host  
-    -o <org_name>, --org: organization name  
-    -m <email1,email2,...>, --mail <email1,email2,...>: specify emails to send notifications. Conflicts with -f  
-    -f <file>, --file <file>: specify file with emails. 1 address per line. Conflicts with -m"""
+    -o <org1_name>,<org2_name>,... --org <org1_name>,<org2_name>,... : organization names  
+    -m <email1,email2,...>, --mail <email1,email2,...>: specify emails to send notifications.   
+    -c <filename>, --config <filename>: specify config .yml file 
+
+config file:
+    
+   token: 
+   db_name: 
+   db_username: 
+   db_password: 
+   db_host: 
+   org_names:
+        - org1
+	- org2
+   emails:
+        - email1
+	- email2
 

@@ -2,13 +2,19 @@
 #api
 import json
 import urllib2
+
 #sqlite
 import sqlite3
+
 #options
 import sys,getopt
+
 #mail
 import smtplib
 from email.mime.text import MIMEText
+
+#configfile
+import yaml
 
 def mail(message,recipient,subject,smtp_host,sender='repository_bot@tech-corps.com'):
 	msg = MIMEText(message)
@@ -35,6 +41,7 @@ def log_and_send(logstring,msg):
 	log(msg)
 	logstring=logstring+'\n'+msg
 	mailall(msg,recipients,subject,smtp_host,sender='repository_bot@tech-corps.com')
+
 def init_db(host,user,password,db):
 	
 	try:
@@ -80,7 +87,7 @@ def get_user_repos(username, token):
 	full_res=api_request('/users/'+username+'/repos',token=token)
 	res = {}
 	for iterator in full_res:
-		res.update({iterator['full_name']:iterator['pushed_at']})
+		res.update({iterator['full_name']:[iterator['pushed_at'],iterator['html_url']]})
 	return res
 
 def get_org_users(org_name,token):
@@ -139,18 +146,36 @@ def main():
 	user = 'root'
 	password = 'password'
 	db = 'public_repos.db'
-	org = 'Tech-Corps'
+	orgs = ['Tech-Corps']
 	emails = []
 	logstring = ''
 	token = None
-	m_flag = False
-	f_flag = False
 #	print sys.argv
 	try: 
-		opts, args = getopt.getopt(sys.argv[1:],"ht:d:u:p:H:o:m:f:",["help","token","database","user", "password","host","org","mail","file"])
+		opts, args = getopt.getopt(sys.argv[1:],"ht:d:u:p:H:o:m:f:c:",["help","token","database","user", "password","host","org","mail","file","config"])
 	except getopt.GetoptError:
 		print 'wrong options. Try -h for the whole list'
 		sys.exit(2)
+	#first, load config if exists
+	for opt, arg in opts:
+		if opt in ("-c","--config"):
+			config_file = open(arg).read()
+			data = yaml.load(config_file)
+			if data['token']:
+				token = data['token']
+			if data['db_name']:
+				db = data['db_name']
+			if data['db_username']:
+				user = data['db_username']
+			if data['db_password']:
+				password = data['db_password']
+			if data['db_host']:
+				db_host = data['db_host']
+			if data['org_names']:
+				orgs = data['org_names']
+			if data['emails']:
+				emails = data['emails']
+
 	for opt, arg in opts:
 		if opt in ("-h", "--help"):
 			print """-h, --help: print this help
@@ -159,10 +184,10 @@ def main():
 			-u <username>, --user <username>: specify db user
 			-p <password>, --password <password>: specify db pass
 			-H <hostname>, --hostname <hostname>: specify db host
-			-o <org_name>, --org: organization name
-			-m <email1,email2,...>, --mail <email1,email2,...>: specify emails to send notifications. Conflicts with -f
-			-f <file>, --file <file>: specify file with emails. 1 address per line. Conflicts with -m"""
+			-o <org1_name>,<org2_name>, --org <org1_name>,<org2_name> : organization names
+			-m <email1,email2,...>, --mail <email1,email2,...>: specify emails to send notifications"""
 			sys.exit()
+
 		elif opt in ("-t", "--token"):
 			token = arg
 		elif opt in ("-d", "--database"):
@@ -174,50 +199,48 @@ def main():
 		elif opt in ("-H", "--host"):
 			host = arg
 		elif opt in ("-o", "--org"):
-			org = arg
+			orgs.extend(arg.split(","))
 		elif opt in ("-m","--mail"):
-			m_flag = True
-			email_sting = arg
-			emails = arg.split(",")
+			emails.extend(arg.split(","))
 			for email in emails:
 				email = email.strip()
-		elif opt in ("-f","--file"):
-			f_flag = True
-			with open(arg,'r') as f:
-				for line in f:
-					emails.append(line)
+
+	print emails
+	print orgs
+
 	if not token:
 		print "token required! pass it with -t option"
 		sys.exit(2)
-	if f_flag and m_flag:
-		print "-f and -m arguments found! please use only one of them"
-		sys.exit(2)
 	if not emails:
-		print "emails required! pass it with -m or -f option!"
+		print "emails required! pass it with -m option!"
 		sys.exit(2)
-	connect=init_db(host, user, password,db)
-	members = get_org_users(org,token)
-	for user in members:
-		userid =is_user_in_db(user, connect) 
-		if not userid:
-			log ('New User: '+user)
-			userid = add_user_to_db(user,connect)
-		repos = get_user_repos(user,token)
-		for reponame, repo_current_date in repos.iteritems():
-			repo_db_date = is_repo_in_db(userid,reponame,connect)
-			if not repo_db_date:
-				sending_msg = '['+repo_current_date+'] NEW REPOSITOIRY'+'\nowner: '+user+'\nrepo name:'+ reponame
-				log(sending_msg)
-				logstring = logstring + '\n'+ sending_msg
-				add_repo_to_db(userid, reponame, repo_current_date, connect)
 
-			elif repo_db_date != repo_current_date:
-				sending_msg = '['+repo_current_date+']'+' REPOSITORY UPDATED:'+'\n'+'owner:'+ user+'\n'+'repo name:'+ reponame
-				log(sending_msg)
-				logstring = logstring + '\n'+ sending_msg
-				update_date(userid,reponame,repo_current_date,connect)
-	if logstring:
-		mailall(logstring,emails,'repositories updated','localhost')
+	connect=init_db(host, user, password,db)
+	for org in orgs:
+		members = get_org_users(org,token)
+		for user in members:
+			userid =is_user_in_db(user, connect) 
+			if not userid:
+				log ('New User: '+user)
+				userid = add_user_to_db(user,connect)
+			repos = get_user_repos(user,token)
+			for reponame, repo_items in repos.iteritems():
+				repo_current_date = repo_items[0]
+				repo_html = repo_items[1]
+				repo_db_date = is_repo_in_db(userid,reponame,connect)
+				if not repo_db_date:
+					sending_msg = '['+repo_current_date+'] NEW REPOSITOIRY'+'\nowner: '+user+'\norg: '+org+'\nrepo name:'+ reponame+'\nrepo url: '+repo_html
+					log(sending_msg)
+					logstring = logstring + '\n'+ sending_msg
+					add_repo_to_db(userid, reponame, repo_current_date, connect)
+
+				elif repo_db_date != repo_current_date:
+					sending_msg = '['+repo_current_date+']'+' REPOSITORY UPDATED:'+'\n'+'owner:'+ user+'\norg: '+org+'\nrepo name:'+ reponame+'\nrepo url: '+repo_html
+					log(sending_msg)
+					logstring = logstring + '\n'+ sending_msg
+					update_date(userid,reponame,repo_current_date,connect)
+#		if logstring:
+#		mailall(logstring,emails,'repositories updated','localhost')
 	connect.close()
 
 
