@@ -16,7 +16,7 @@ from email.mime.text import MIMEText
 #configfile
 import yaml
 
-def mail(message,recipient,subject,smtp_host,sender='repository_bot@tech-corps.com'):
+def mail(message,recipient,subject,smtp_host,sender):
 	msg = MIMEText(message)
 	msg['Subject'] = subject
 	msg['From'] =sender
@@ -30,9 +30,9 @@ def mail(message,recipient,subject,smtp_host,sender='repository_bot@tech-corps.c
 		print 'No connection to SMTP server'
 		sys.exit(2)
 
-def mailall(message,recipients,subject,smtp_host,sender='repository_bot@tech-corps.com'):
+def mailall(message,recipients,subject,smtp_host,sender):
 	for rec in recipients:
-		mail(message,rec,subject,smtp_host,sender='repository_bot@tech-corps.com')
+		mail(message,rec,subject,smtp_host,sender)
 
 def log(log_string):
 	print log_string
@@ -40,7 +40,7 @@ def log(log_string):
 def log_and_send(logstring,msg):
 	log(msg)
 	logstring=logstring+'\n'+msg
-	mailall(msg,recipients,subject,smtp_host,sender='repository_bot@tech-corps.com')
+	mailall(msg,recipients,subject,smtp_host,sender)
 
 def init_db(host,user,password,db):
 	
@@ -142,40 +142,54 @@ def update_date(userid,repo,date,connect):
 	
 
 def main():
-	host = 'localhost'
-	user = 'root'
-	password = 'password'
-	db = 'public_repos.db'
-	orgs = ['Tech-Corps']
+	db_host = ''
+	db_user = ''
+	db_password = ''
+	db_name = ''
+	orgs = []
 	emails = []
 	logstring = ''
+	config_file = 'config.yml'
 	token = None
+	mailhost = ''
+	sender = ''
 #	print sys.argv
 	try: 
-		opts, args = getopt.getopt(sys.argv[1:],"ht:d:u:p:H:o:m:f:c:",["help","token","database","user", "password","host","org","mail","file","config"])
+		opts, args = getopt.getopt(sys.argv[1:],"ht:d:u:p:H:o:m:f:c:M:s:",["help","token","database","user", "password","host","org","mail","file","config","mailhost","sender"])
 	except getopt.GetoptError:
 		print 'wrong options. Try -h for the whole list'
 		sys.exit(2)
 	#first, load config if exists
 	for opt, arg in opts:
 		if opt in ("-c","--config"):
-			config_file = open(arg).read()
-			data = yaml.load(config_file)
-			if data['token']:
-				token = data['token']
-			if data['db_name']:
-				db = data['db_name']
-			if data['db_username']:
-				user = data['db_username']
-			if data['db_password']:
-				password = data['db_password']
-			if data['db_host']:
-				db_host = data['db_host']
-			if data['org_names']:
-				orgs = data['org_names']
-			if data['emails']:
-				emails = data['emails']
+			config_file = arg
+	try:
+		config_file_descriptor = open(config_file).read()
+		data = yaml.load(config_file_descriptor)
+	except IOError:
+		print 'no config file '+config_file+' found. Provide valid config file!'
+		sys.exit(2)
+	for key, val in data.iteritems():
+		if 'token' in key:
+			token = val
+		elif 'db_name' in key:
+			db_name= val
+		elif 'db_username' in key:
+			db_user = val
+		elif 'db_password' in key:
+			db_password = val
+		elif 'db_host' in key:
+			db_host = val
+		elif 'org_names' in key:
+			orgs = val
+		elif 'emails' in key:
+			emails = val
+		elif 'mailhost' in key:
+			mailhost = val
+		elif 'sender' in key:
+			sender = val
 
+	#then, overload options if specified
 	for opt, arg in opts:
 		if opt in ("-h", "--help"):
 			print """-h, --help: print this help
@@ -185,34 +199,60 @@ def main():
 			-p <password>, --password <password>: specify db pass
 			-H <hostname>, --hostname <hostname>: specify db host
 			-o <org1_name>,<org2_name>, --org <org1_name>,<org2_name> : organization names
-			-m <email1,email2,...>, --mail <email1,email2,...>: specify emails to send notifications"""
+			-m <email1,email2,...>, --mail <email1,email2,...>: specify emails to send notifications
+			-M <hostname>, --mailhost <hostname>: specify SMTP hostname
+			-s <email>, --sender <email>: specify sender email"""
 			sys.exit()
 
 		elif opt in ("-t", "--token"):
 			token = arg
 		elif opt in ("-d", "--database"):
-			db = arg
+			db_name = arg
 		elif opt in ("-u", "--user"):
-			user = arg
+			db_user = arg
 		elif opt in ("-p", "--password"):
-			password = arg
+			db_password = arg
 		elif opt in ("-H", "--host"):
-			host = arg
+			db_host = arg
 		elif opt in ("-o", "--org"):
 			orgs.extend(arg.split(","))
 		elif opt in ("-m","--mail"):
 			emails.extend(arg.split(","))
 			for email in emails:
 				email = email.strip()
-
+		elif opt in ("-M","--mailhost"):
+			mailhost = arg
+		elif iot in ("-s","--sender"):
+			sender = arg
 	if not token:
-		print "token required! pass it with -t option"
+		print "token required! pass it with -t option or in config file"
+		sys.exit(2)
+	if not db_name:
+                print "db name required! pass it with -d option or in config file"
+                sys.exit(2)
+	if not db_user:
+                print "db username required! pass it with -u option or in config file"
+                sys.exit(2)
+	if not db_password:
+                print "db password required! pass it with -p option or in config file"
+                sys.exit(2)
+	if not db_host:
+                print "db hostname required! pass it with -H option or in config file"
+                sys.exit(2)
+	if not orgs:
+		print "org name required! pass it with -o option or in config file"
 		sys.exit(2)
 	if not emails:
-		print "emails required! pass it with -m option!"
+		print "emails required! pass it with -m option or in config file"
+		sys.exit(2)
+	if not mailhost:
+		print "mailhost required! pass it with -M option or in config file"
+		sys.exit(2)
+	if not sender:
+		print "sender required! pass it with -s option or in config file"
 		sys.exit(2)
 
-	connect=init_db(host, user, password,db)
+	connect=init_db(db_host, db_user, db_password,db_name)
 	for org in orgs:
 		members = get_org_users(org,token)
 		for user in members:
@@ -237,7 +277,7 @@ def main():
 					logstring = logstring + '\n'+ sending_msg
 					update_date(userid,reponame,repo_current_date,connect)
 	if logstring:
-		mailall(logstring,emails,'repositories updated','localhost')
+		mailall(logstring,emails,'repositories updated',mailhost,sender)
 	connect.close()
 
 
