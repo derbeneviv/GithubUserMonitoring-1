@@ -146,7 +146,7 @@ def main():
 	db_user = ''
 	db_password = ''
 	db_name = ''
-	orgs = []
+	orgs = {}
 	emails = []
 	logstring = ''
 	config_file = 'config.yml'
@@ -180,10 +180,8 @@ def main():
 			db_password = val
 		elif 'db_host' in key:
 			db_host = val
-		elif 'org_names' in key:
+		elif 'orgs' in key:
 			orgs = val
-		elif 'emails' in key:
-			emails = val
 		elif 'mailhost' in key:
 			mailhost = val
 		elif 'sender' in key:
@@ -198,8 +196,7 @@ def main():
 			-u <username>, --user <username>: specify db user
 			-p <password>, --password <password>: specify db pass
 			-H <hostname>, --hostname <hostname>: specify db host
-			-o <org1_name>,<org2_name>, --org <org1_name>,<org2_name> : organization names
-			-m <email1,email2,...>, --mail <email1,email2,...>: specify emails to send notifications
+			-o <org1_name:email1,email2>;<org2_name:email3,email4>;... --org <org1_name:email1,email2>;<org2_name:email3,email4> : organization names and emails per organization
 			-M <hostname>, --mailhost <hostname>: specify SMTP hostname
 			-s <email>, --sender <email>: specify sender email"""
 			sys.exit()
@@ -215,15 +212,15 @@ def main():
 		elif opt in ("-H", "--host"):
 			db_host = arg
 		elif opt in ("-o", "--org"):
-			orgs.extend(arg.split(","))
-		elif opt in ("-m","--mail"):
-			emails.extend(arg.split(","))
-			for email in emails:
-				email = email.strip()
+			for org in arg.split(";"):
+				temp_mails = org.split(":")[1].split(",")
+				temp_org = {org.split(":")[0]:temp_mails}
+				orgs.update(temp_org)
 		elif opt in ("-M","--mailhost"):
 			mailhost = arg
-		elif iot in ("-s","--sender"):
+		elif opt in ("-s","--sender"):
 			sender = arg
+	print orgs
 	if not token:
 		print "token required! pass it with -t option or in config file"
 		sys.exit(2)
@@ -242,9 +239,6 @@ def main():
 	if not orgs:
 		print "org name required! pass it with -o option or in config file"
 		sys.exit(2)
-	if not emails:
-		print "emails required! pass it with -m option or in config file"
-		sys.exit(2)
 	if not mailhost:
 		print "mailhost required! pass it with -M option or in config file"
 		sys.exit(2)
@@ -253,7 +247,7 @@ def main():
 		sys.exit(2)
 
 	connect=init_db(db_host, db_user, db_password,db_name)
-	for org in orgs:
+	for org, emails in orgs.items():
 		members = get_org_users(org,token)
 		for user in members:
 			userid =is_user_in_db(user, connect) 
@@ -276,8 +270,8 @@ def main():
 					log(sending_msg)
 					logstring = logstring + '\n'+ sending_msg
 					update_date(userid,reponame,repo_current_date,connect)
-	if logstring:
-		mailall(logstring,emails,'repositories updated',mailhost,sender)
+		if logstring:
+			mailall(logstring,emails,'repositories updated',mailhost,sender)
 	connect.close()
 
 

@@ -3,7 +3,8 @@ db_name: public_repos.db
 db_username: root
 db_password: password
 db_host: localhost
-org_names: 
-        - VerySwagOrg_Inc.
-emails:
-        - vasiliy_pupkin@veryswagorg.com
+org: 
+        VerySwagOrg_Inc:
+        	- vasiliy_pupkin@veryswagorg.com
+	AnotherGreatORG:
+		- mail@mail.mail
