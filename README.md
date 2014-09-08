@@ -24,8 +24,7 @@ keys:
 -u <username>, --user <username>: specify db user
 -p <password>, --password <password>: specify db pass
 -H <hostname>, --hostname <hostname>: specify db host
--o <org1_name>,<org2_name>,... --org <org1_name>,<org2_name>,... : organization names
--m <email1,email2,...>, --mail <email1,email2,...>: specify emails to send notifications.
+-o <org1_name:email1,email2>;<org2_name:email3,email4>;... --org <org1_name:email1,email2>;<org2_name:email3,email4> :organization names and emails per organization
 -c <filename>, --config <filename>: specify config .yml file
 ```
 config file:  
@@ -35,10 +34,11 @@ db_name:
 db_username:  
 db_password:  
 db_host:  
-org_names:  
-    - org1
-    - org2
-emails:
-    - email1
-    - email2
+orgs:  
+    org1:
+	- mail1
+	- mail2
+    org2:
+	- mail3
+	- mail4
 ```
