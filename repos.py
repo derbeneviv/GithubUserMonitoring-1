@@ -78,7 +78,8 @@ def api_request(req_url, token, api_url='https://api.github.com'):
 	req = urllib2.Request(url=url, headers=headers)
 	try:
 		response = urllib2.urlopen(req)
-		return json.load(response)
+		json_response = json.load(response)
+		return json_response
 	except urllib2.HTTPError as e:
 		print e
 		sys.exit(2)
@@ -147,10 +148,8 @@ def main():
 	db_password = ''
 	db_name = ''
 	orgs = {}
-	emails = []
 	logstring = ''
 	config_file = 'config.yml'
-	token = None
 	mailhost = ''
 	sender = ''
 #	print sys.argv
@@ -170,9 +169,7 @@ def main():
 		print 'no config file '+config_file+' found. Provide valid config file!'
 		sys.exit(2)
 	for key, val in data.iteritems():
-		if 'token' in key:
-			token = val
-		elif 'db_name' in key:
+		if 'db_name' in key:
 			db_name= val
 		elif 'db_username' in key:
 			db_user = val
@@ -191,18 +188,15 @@ def main():
 	for opt, arg in opts:
 		if opt in ("-h", "--help"):
 			print """-h, --help: print this help
-			-t <token>, --token <token>: specify token
 			-d <dbname>, --database <dbname>: specify db name
 			-u <username>, --user <username>: specify db user
 			-p <password>, --password <password>: specify db pass
 			-H <hostname>, --hostname <hostname>: specify db host
-			-o <org1_name:email1,email2>;<org2_name:email3,email4>;... --org <org1_name:email1,email2>;<org2_name:email3,email4> : organization names and emails per organization
+			-o <org1_name:token:email1,email2>;<org2_name:token:email3,email4>;... --org <org1_name:token:email1,email2>;<org2_name:email3,email4> : organization names and emails per organization
 			-M <hostname>, --mailhost <hostname>: specify SMTP hostname
 			-s <email>, --sender <email>: specify sender email"""
 			sys.exit()
 
-		elif opt in ("-t", "--token"):
-			token = arg
 		elif opt in ("-d", "--database"):
 			db_name = arg
 		elif opt in ("-u", "--user"):
@@ -213,17 +207,14 @@ def main():
 			db_host = arg
 		elif opt in ("-o", "--org"):
 			for org in arg.split(";"):
-				temp_mails = org.split(":")[1].split(",")
-				temp_org = {org.split(":")[0]:temp_mails}
+				temp_token = org.split(":")[1]
+				temp_mails = org.split(":")[2].split(",")
+				temp_org = {org.split(":")[0]:{'token':temp_token,"mails":temp_mails}}
 				orgs.update(temp_org)
 		elif opt in ("-M","--mailhost"):
 			mailhost = arg
 		elif opt in ("-s","--sender"):
 			sender = arg
-	print orgs
-	if not token:
-		print "token required! pass it with -t option or in config file"
-		sys.exit(2)
 	if not db_name:
                 print "db name required! pass it with -d option or in config file"
                 sys.exit(2)
@@ -247,7 +238,15 @@ def main():
 		sys.exit(2)
 
 	connect=init_db(db_host, db_user, db_password,db_name)
-	for org, emails in orgs.items():
+	for org, info in orgs.items():
+		token = info['token']
+		emails = info['emails']
+		if not token:
+			print "ERROR: token required!"
+			sys.exit(2)
+		if not emails:
+			print "ERROR: emails required!"
+			sys.exit(2)
 		members = get_org_users(org,token)
 		for user in members:
 			userid =is_user_in_db(user, connect) 

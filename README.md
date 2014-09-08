@@ -19,7 +19,6 @@ in file there should be a list of emails 1 per line
 keys:
 ```
 -h, --help: print this help
--t <token>, --token <token>: specify token
 -d <dbname>, --database <dbname>: specify db name
 -u <username>, --user <username>: specify db user
 -p <password>, --password <password>: specify db pass
@@ -35,9 +34,11 @@ db_username:
 db_password:  
 db_host:  
 orgs:  
+    token: 
     org1:
 	- mail1
 	- mail2
+    token:
     org2:
 	- mail3
 	- mail4
