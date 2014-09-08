@@ -259,13 +259,13 @@ def main():
 				repo_html = repo_items[1]
 				repo_db_date = is_repo_in_db(userid,reponame,connect)
 				if not repo_db_date:
-					sending_msg = '['+repo_current_date+'] NEW REPOSITOIRY'+'\nowner: '+user+'\norg: '+org+'\nrepo name:'+ reponame+'\nrepo url: '+repo_html
+					sending_msg = '['+repo_current_date+'] NEW REPOSITOIRY'+'\nowner: '+user+'\norg: '+org+'\nrepo name:'+ reponame+'\nrepo url: '+repo_html+"\n\n"
 					log(sending_msg)
 					logstring = logstring + '\n'+ sending_msg
 					add_repo_to_db(userid, reponame, repo_current_date, connect)
 
 				elif repo_db_date != repo_current_date:
-					sending_msg = '['+repo_current_date+']'+' REPOSITORY UPDATED:'+'\n'+'owner:'+ user+'\norg: '+org+'\nrepo name:'+ reponame+'\nrepo url: '+repo_html
+					sending_msg = '['+repo_current_date+']'+' REPOSITORY UPDATED:'+'\n'+'owner:'+ user+'\norg: '+org+'\nrepo name:'+ reponame+'\nrepo url: '+repo_html+"\n\n"
 					log(sending_msg)
 					logstring = logstring + '\n'+ sending_msg
 					update_date(userid,reponame,repo_current_date,connect)
