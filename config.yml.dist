@@ -5,6 +5,10 @@ db_password: password
 db_host: localhost
 org: 
         VerySwagOrg_Inc:
-        	- vasiliy_pupkin@veryswagorg.com
+	        token: tokentokentokentokentokentokentokentoken
+	        emails:
+	               - vasiliy_pupkin@veryswagorg.com
 	AnotherGreatORG:
-		- mail@mail.mail
+	        token: t2okent2okent2okento2kento2kentok2ento2kentoken
+	        emails:
+	               - vasiliy_pupkin@anothergorg.com
