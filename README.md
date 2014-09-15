@@ -28,18 +28,17 @@ keys:
 ```
 config file:  
 ```
-token:  
 db_name:  
 db_username:  
 db_password:  
 db_host:  
-orgs:  
-    token: 
-    org1:
-	- mail1
-	- mail2
-    token:
-    org2:
-	- mail3
-	- mail4
+org:
+  VerySwagOrg_Inc:
+    token: tokentokentokentokentokentokentokentoken
+    emails:
+      - vasiliy_pupkin@veryswagorg.com
+  AnotherGreatORG:
+    token: t2okent2okent2okento2kento2kentok2ento2kentoken
+    emails:
+      - vasiliy_pupkin@anothergorg.com
 ```
