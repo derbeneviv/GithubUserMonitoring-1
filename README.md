@@ -23,22 +23,25 @@ keys:
 -u <username>, --user <username>: specify db user
 -p <password>, --password <password>: specify db pass
 -H <hostname>, --hostname <hostname>: specify db host
--o <org1_name:email1,email2>;<org2_name:email3,email4>;... --org <org1_name:email1,email2>;<org2_name:email3,email4> :organization names and emails per organization
--c <filename>, --config <filename>: specify config .yml file
+-o <org1_name:token:email1,email2>;<org2_name:token:email3,email4>;... --org <org1_name:token:email1,email2>;<org2_name:email3,email4> : organization names and emails per organization
+-M <hostname>, --mailhost <hostname>: specify SMTP hostname
+-s <email>, --sender <email>: specify sender email
 ```
 config file:  
 ```
-db_name:  
-db_username:  
-db_password:  
-db_host:  
+db_name: public_repos.db
+db_username: root
+db_password: password
+db_host: localhost
 org:
   VerySwagOrg_Inc:
     token: tokentokentokentokentokentokentokentoken
     emails:
-      - vasiliy_pupkin@veryswagorg.com
+        - vasiliy_pupkin@veryswagorg.com
   AnotherGreatORG:
     token: t2okent2okent2okento2kento2kentok2ento2kentoken
     emails:
       - vasiliy_pupkin@anothergorg.com
+sender: repo-bot@tech-corps.com
+mailhost: localhost
 ```

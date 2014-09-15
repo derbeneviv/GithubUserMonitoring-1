@@ -11,3 +11,5 @@ org:
 	        token: t2okent2okent2okento2kento2kentok2ento2kentoken
 	        emails:
 	               - vasiliy_pupkin@anothergorg.com
+sender: repo-bot@tech-corps.com
+mailhost: localhost
