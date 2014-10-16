@@ -269,8 +269,8 @@ def main():
 					log(sending_msg)
 					logstring = logstring + '\n'+ sending_msg
 					update_date(userid,reponame,repo_current_date,connect)
-		if logstring:
-			mailall(logstring,emails,'repositories updated',mailhost,sender)
+	if logstring:
+		mailall(logstring,emails,'repositories updated',mailhost,sender)
 	connect.close()
 
 
